@@ -1,1 +1,11 @@
-# repo-template
+
+  # Design Customers Module UI
+
+  This is a code bundle for Design Customers Module UI. The original project is available at https://www.figma.com/design/S4WvVjogBTRJwHW7RbgJNz/Design-Customers-Module-UI.
+
+  ## Running the code
+
+  Run `npm i` to install the dependencies.
+
+  Run `npm run dev` to start the development server.
+  
