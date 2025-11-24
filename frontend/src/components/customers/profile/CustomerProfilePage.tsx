@@ -93,6 +93,7 @@ interface ApiCustomerProfile {
 interface ApiHousehold {
   id: string;
   headCustomerProfileId: string;
+  headCustomerProfile?: ApiCustomerProfile | null;
   members: Array<{
     id: string;
     relationship?: string | null;
@@ -380,21 +381,45 @@ export function CustomerProfilePage({
     customFields: [],
   };
 
-  const householdMembers = summary.household?.members?.map((member) => ({
-    id: member.customerProfile.id,
-    name: `${member.customerProfile.firstName} ${member.customerProfile.lastName}`,
-    relationship: member.relationship ?? "Member",
-    status: STATUS_TO_BADGE[member.customerProfile.status] ?? STATUS_TO_BADGE.LEAD,
-    isHead: member.customerProfile.id === summary.household?.headCustomerProfileId,
-  })) ?? [];
+  const apiMembers =
+    summary.household?.members?.map((member) => ({
+      id: member.customerProfile.id,
+      name: `${member.customerProfile.firstName} ${member.customerProfile.lastName}`,
+      relationship: member.relationship ?? "Member",
+      status:
+        STATUS_TO_BADGE[member.customerProfile.status] ?? STATUS_TO_BADGE.LEAD,
+      isHead: member.customerProfile.id === summary.household?.headCustomerProfileId,
+    })) ?? [];
+
+  const headProfile =
+    summary.household?.headCustomerProfile ??
+    summary.household?.members
+      ?.map((member) => member.customerProfile)
+      .find((profile) => profile.id === summary.household?.headCustomerProfileId);
+
+  const headMember = headProfile
+    ? {
+        id: headProfile.id,
+        name: `${headProfile.firstName} ${headProfile.lastName}`,
+        relationship: "Head of household",
+        status: STATUS_TO_BADGE[headProfile.status] ?? STATUS_TO_BADGE.LEAD,
+        isHead: true,
+      }
+    : undefined;
+
+  const householdMembers = headMember
+    ? [
+        headMember,
+        ...apiMembers.filter((member) => member.id !== headMember.id),
+      ]
+    : apiMembers;
 
   const householdData = summary.household
     ? {
         hasHousehold: true,
         isHead: summary.household.headCustomerProfileId === customer.id,
         headOfHousehold:
-          householdMembers.find((member) => member.isHead) ??
-          undefined,
+          headMember ?? householdMembers.find((member) => member.isHead) ?? undefined,
         members: householdMembers,
       }
     : {
