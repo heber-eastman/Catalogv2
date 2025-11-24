@@ -39,6 +39,7 @@ interface HouseholdTabProps {
   data: HouseholdData;
   currentCustomerId: string;
   onRefresh?: () => void | Promise<void>;
+  onViewProfile?: (customerId: string) => void;
 }
 
 interface SearchCustomerResult {
@@ -54,6 +55,7 @@ export function HouseholdTab({
   data,
   currentCustomerId,
   onRefresh,
+  onViewProfile,
 }: HouseholdTabProps) {
   const apiClient = useApiClient();
   const [isCreatingHousehold, setIsCreatingHousehold] = React.useState(false);
@@ -272,7 +274,7 @@ export function HouseholdTab({
   if (data.isHead) {
     return (
       <>
-        <div className="space-y-6">
+      <div className="space-y-6">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between flex-wrap gap-4">
@@ -365,7 +367,7 @@ export function HouseholdTab({
             </p>
           </CardContent>
         </Card>
-        </div>
+      </div>
 
         <Dialog
           open={isAddMemberOpen}
@@ -542,7 +544,11 @@ export function HouseholdTab({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => console.log("View head profile", data.headOfHousehold?.id)}
+                  onClick={() =>
+                    data.headOfHousehold?.id &&
+                    onViewProfile?.(data.headOfHousehold.id)
+                  }
+                  disabled={!onViewProfile || !data.headOfHousehold?.id}
                 >
                   View Profile
                 </Button>
@@ -579,7 +585,8 @@ export function HouseholdTab({
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => console.log("View member", member.id)}
+                      onClick={() => onViewProfile?.(member.id)}
+                      disabled={!onViewProfile}
                     >
                       View
                     </Button>

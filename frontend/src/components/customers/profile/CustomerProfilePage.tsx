@@ -169,6 +169,7 @@ interface CustomerSummaryResponse {
 interface CustomerProfilePageProps {
   customerId?: string;
   onBack?: () => void;
+  onNavigateToCustomer?: (customerId: string) => void;
 }
 
 const formatDate = (value?: string | null) => {
@@ -210,6 +211,7 @@ const formatBytes = (bytes?: number | null) => {
 export function CustomerProfilePage({
   customerId,
   onBack,
+  onNavigateToCustomer,
 }: CustomerProfilePageProps) {
   const apiClient = useApiClient();
   const [activeTab, setActiveTab] = React.useState("overview");
@@ -539,6 +541,7 @@ export function CustomerProfilePage({
             data={householdData}
             currentCustomerId={customer.id}
             onRefresh={fetchSummary}
+            onViewProfile={onNavigateToCustomer}
           />
         </TabsContent>
 

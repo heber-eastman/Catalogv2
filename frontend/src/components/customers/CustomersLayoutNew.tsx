@@ -48,6 +48,7 @@ export function CustomersLayoutNew({
         <CustomerProfilePage
           customerId={selectedCustomerId}
           onBack={handleBackToPeople}
+          onNavigateToCustomer={handleCustomerSelect}
         />
       );
     }
