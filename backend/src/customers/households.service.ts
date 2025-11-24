@@ -16,10 +16,20 @@ export class HouseholdsService {
 
   async getHouseholdForCustomer(
     organizationId: string,
-    headCustomerProfileId: string,
+    customerProfileId: string,
   ) {
     return this.prisma.household.findFirst({
-      where: { organizationId, headCustomerProfileId },
+      where: {
+        organizationId,
+        OR: [
+          { headCustomerProfileId: customerProfileId },
+          {
+            members: {
+              some: { customerProfileId },
+            },
+          },
+        ],
+      },
       include: {
         headCustomerProfile: true,
         members: {

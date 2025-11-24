@@ -22,6 +22,30 @@ describe('HouseholdsService', () => {
     service = new HouseholdsService(prisma);
   });
 
+  it('returns the household when the customer is head or member', async () => {
+    const householdRecord = { id: 'house_1' } as any;
+    prisma.household.findFirst.mockResolvedValue(householdRecord);
+
+    const result = await service.getHouseholdForCustomer(
+      'org_1',
+      'cust_member',
+    );
+
+    expect(prisma.household.findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          organizationId: 'org_1',
+          OR: [
+            { headCustomerProfileId: 'cust_member' },
+            { members: { some: { customerProfileId: 'cust_member' } } },
+          ],
+        },
+        include: expect.any(Object),
+      }),
+    );
+    expect(result).toBe(householdRecord);
+  });
+
   it('creates a household scoped to an organization', async () => {
     prisma.household.findFirst.mockResolvedValue(null);
     prisma.household.create.mockResolvedValue({
