@@ -510,7 +510,11 @@ export function CustomerProfilePage({
         </TabsContent>
 
         <TabsContent value="household" className="mt-6">
-          <HouseholdTab data={householdData} currentCustomerId={customer.id} />
+          <HouseholdTab
+            data={householdData}
+            currentCustomerId={customer.id}
+            onRefresh={fetchSummary}
+          />
         </TabsContent>
 
         <TabsContent value="membership" className="mt-6">

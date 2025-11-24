@@ -4,6 +4,8 @@ import { Button } from "../../ui/button";
 import { StatusBadge, CustomerStatus } from "../StatusBadge";
 import { Badge } from "../../ui/badge";
 import { Users, Crown, Plus, UserMinus, UserCog } from "lucide-react";
+import { useApiClient } from "../../../hooks/useApiClient";
+import { toast } from "sonner@2.0.3";
 
 interface HouseholdMember {
   id: string;
@@ -26,9 +28,34 @@ interface HouseholdData {
 interface HouseholdTabProps {
   data: HouseholdData;
   currentCustomerId: string;
+  onRefresh?: () => void | Promise<void>;
 }
 
-export function HouseholdTab({ data, currentCustomerId }: HouseholdTabProps) {
+export function HouseholdTab({
+  data,
+  currentCustomerId,
+  onRefresh,
+}: HouseholdTabProps) {
+  const apiClient = useApiClient();
+  const [isCreatingHousehold, setIsCreatingHousehold] = React.useState(false);
+
+  const handleCreateHousehold = React.useCallback(async () => {
+    setIsCreatingHousehold(true);
+    try {
+      await apiClient(`/api/customers/${currentCustomerId}/household`, {
+        method: "POST",
+      });
+      toast.success("Household created");
+      await onRefresh?.();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Unable to create household";
+      toast.error(message);
+    } finally {
+      setIsCreatingHousehold(false);
+    }
+  }, [apiClient, currentCustomerId, onRefresh]);
+
   // Empty state - no household
   if (!data.hasHousehold) {
     return (
@@ -46,10 +73,15 @@ export function HouseholdTab({ data, currentCustomerId }: HouseholdTabProps) {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2 justify-center">
-              <Button variant="outline" onClick={() => console.log("Add to existing household")}>
+              <Button
+                variant="outline"
+                onClick={() =>
+                  toast.info("Linking to an existing household is coming soon.")
+                }
+              >
                 Add to Existing Household
               </Button>
-              <Button onClick={() => console.log("Create household")}>
+              <Button onClick={handleCreateHousehold} disabled={isCreatingHousehold}>
                 Create Household
               </Button>
             </div>
