@@ -15,6 +15,7 @@ import {
 } from "../../ui/dialog";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
+import { Separator } from "../../ui/separator";
 
 interface HouseholdMember {
   id: string;
@@ -40,6 +41,15 @@ interface HouseholdTabProps {
   onRefresh?: () => void | Promise<void>;
 }
 
+interface SearchCustomerResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  primaryEmail?: string | null;
+  primaryPhone?: string | null;
+  status: CustomerStatus;
+}
+
 export function HouseholdTab({
   data,
   currentCustomerId,
@@ -48,9 +58,19 @@ export function HouseholdTab({
   const apiClient = useApiClient();
   const [isCreatingHousehold, setIsCreatingHousehold] = React.useState(false);
   const [isAddMemberOpen, setIsAddMemberOpen] = React.useState(false);
-  const [newMemberId, setNewMemberId] = React.useState("");
-  const [newMemberRelationship, setNewMemberRelationship] = React.useState("");
-  const [isAddingMember, setIsAddingMember] = React.useState(false);
+  const [relationshipLabel, setRelationshipLabel] = React.useState("");
+
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const [searchResults, setSearchResults] = React.useState<SearchCustomerResult[]>([]);
+  const [searchLoading, setSearchLoading] = React.useState(false);
+  const [searchError, setSearchError] = React.useState<string | null>(null);
+  const [connectingCustomerId, setConnectingCustomerId] = React.useState<string | null>(null);
+
+  const [newFirstName, setNewFirstName] = React.useState("");
+  const [newLastName, setNewLastName] = React.useState("");
+  const [newEmail, setNewEmail] = React.useState("");
+  const [newPhone, setNewPhone] = React.useState("");
+  const [isCreatingMember, setIsCreatingMember] = React.useState(false);
 
   const handleCreateHousehold = React.useCallback(async () => {
     setIsCreatingHousehold(true);
@@ -69,37 +89,148 @@ export function HouseholdTab({
     }
   }, [apiClient, currentCustomerId, onRefresh]);
 
-  const handleAddMember = React.useCallback(
-    async (event: React.FormEvent) => {
-      event.preventDefault();
-      if (!newMemberId.trim()) {
-        toast.error("Enter the customer ID to add");
-        return;
-      }
+  const existingMemberIds = React.useMemo(() => {
+    const ids = new Set<string>();
+    ids.add(currentCustomerId);
+    data.members.forEach((member) => ids.add(member.id));
+    if (data.headOfHousehold?.id) {
+      ids.add(data.headOfHousehold.id);
+    }
+    return ids;
+  }, [currentCustomerId, data]);
 
-      setIsAddingMember(true);
+  React.useEffect(() => {
+    if (!isAddMemberOpen || searchTerm.trim().length < 2) {
+      setSearchResults([]);
+      setSearchError(null);
+      return;
+    }
+
+    let cancelled = false;
+    setSearchLoading(true);
+    setSearchError(null);
+
+    const timeout = setTimeout(() => {
+      apiClient<SearchCustomerResult[]>(
+        `/api/customers?search=${encodeURIComponent(searchTerm.trim())}`
+      )
+        .then((results) => {
+          if (cancelled) return;
+          const filtered = results.filter(
+            (customer) => !existingMemberIds.has(customer.id)
+          );
+          setSearchResults(filtered.slice(0, 6));
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          const message =
+            err instanceof Error ? err.message : "Unable to search customers";
+          setSearchError(message);
+        })
+        .finally(() => {
+          if (!cancelled) {
+            setSearchLoading(false);
+          }
+        });
+    }, 350);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeout);
+    };
+  }, [apiClient, existingMemberIds, isAddMemberOpen, searchTerm]);
+
+  const resetDialogState = React.useCallback(() => {
+    setRelationshipLabel("");
+    setSearchTerm("");
+    setSearchResults([]);
+    setSearchError(null);
+    setConnectingCustomerId(null);
+    setNewFirstName("");
+    setNewLastName("");
+    setNewEmail("");
+    setNewPhone("");
+    setIsCreatingMember(false);
+  }, []);
+
+  const connectExistingMember = React.useCallback(
+    async (customerId: string) => {
+      setConnectingCustomerId(customerId);
       try {
         await apiClient(`/api/customers/${currentCustomerId}/household/members`, {
           method: "POST",
           body: JSON.stringify({
-            customerProfileId: newMemberId.trim(),
-            relationship: newMemberRelationship.trim() || null,
+            customerProfileId: customerId,
+            relationship: relationshipLabel.trim() || null,
           }),
         });
         toast.success("Household member added");
         await onRefresh?.();
-        setNewMemberId("");
-        setNewMemberRelationship("");
         setIsAddMemberOpen(false);
+        resetDialogState();
       } catch (err) {
         const message =
           err instanceof Error ? err.message : "Unable to add household member";
         toast.error(message);
       } finally {
-        setIsAddingMember(false);
+        setConnectingCustomerId(null);
       }
     },
-    [apiClient, currentCustomerId, newMemberId, newMemberRelationship, onRefresh]
+    [apiClient, currentCustomerId, onRefresh, relationshipLabel, resetDialogState]
+  );
+
+  const handleCreateNewMember = React.useCallback(
+    async (event: React.FormEvent) => {
+      event.preventDefault();
+      if (!newFirstName.trim() || !newLastName.trim()) {
+        toast.error("First and last name are required");
+        return;
+      }
+
+      setIsCreatingMember(true);
+      try {
+        const created = await apiClient<SearchCustomerResult>(`/api/customers`, {
+          method: "POST",
+          body: JSON.stringify({
+            firstName: newFirstName.trim(),
+            lastName: newLastName.trim(),
+            primaryEmail: newEmail.trim() || null,
+            primaryPhone: newPhone.trim() || null,
+            status: "LEAD",
+          }),
+        });
+
+        await apiClient(`/api/customers/${currentCustomerId}/household/members`, {
+          method: "POST",
+          body: JSON.stringify({
+            customerProfileId: created.id,
+            relationship: relationshipLabel.trim() || null,
+          }),
+        });
+
+        toast.success("Member created and added to household");
+        await onRefresh?.();
+        setIsAddMemberOpen(false);
+        resetDialogState();
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : "Unable to create household member";
+        toast.error(message);
+      } finally {
+        setIsCreatingMember(false);
+      }
+    },
+    [
+      apiClient,
+      currentCustomerId,
+      newEmail,
+      newFirstName,
+      newLastName,
+      newPhone,
+      onRefresh,
+      relationshipLabel,
+      resetDialogState,
+    ]
   );
 
   // Empty state - no household
@@ -236,50 +367,153 @@ export function HouseholdTab({
         </Card>
         </div>
 
-        <Dialog open={isAddMemberOpen} onOpenChange={setIsAddMemberOpen}>
-          <DialogContent className="max-w-md">
-            <form onSubmit={handleAddMember} className="space-y-4">
-              <DialogHeader>
-                <DialogTitle>Add Household Member</DialogTitle>
-              </DialogHeader>
+        <Dialog
+          open={isAddMemberOpen}
+          onOpenChange={(open) => {
+            setIsAddMemberOpen(open);
+            if (!open) {
+              resetDialogState();
+            }
+          }}
+        >
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Add Household Member</DialogTitle>
+            </DialogHeader>
 
+            <div className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="newMemberId">Customer ID</Label>
+                <Label htmlFor="relationshipLabel">Relationship label (optional)</Label>
                 <Input
-                  id="newMemberId"
-                  value={newMemberId}
-                  onChange={(event) => setNewMemberId(event.target.value)}
-                  placeholder="cust_12345"
-                  required
+                  id="relationshipLabel"
+                  value={relationshipLabel}
+                  onChange={(event) => setRelationshipLabel(event.target.value)}
+                  placeholder="Spouse, sibling, parent…"
                 />
+                <p className="text-sm text-muted-foreground">
+                  Applied to whichever member you add below.
+                </p>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="newMemberRelationship">Relationship (optional)</Label>
+              <div className="space-y-3">
+                <h4 className="font-medium">Search existing customers</h4>
                 <Input
-                  id="newMemberRelationship"
-                  value={newMemberRelationship}
-                  onChange={(event) =>
-                    setNewMemberRelationship(event.target.value)
-                  }
-                  placeholder="Spouse, child, parent…"
+                  placeholder="Search by name or email"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
                 />
+                {searchTerm.trim().length < 2 && (
+                  <p className="text-sm text-muted-foreground">
+                    Enter at least two characters to start searching.
+                  </p>
+                )}
+                {searchLoading && (
+                  <p className="text-sm text-muted-foreground">Searching…</p>
+                )}
+                {searchError && (
+                  <p className="text-sm text-destructive">{searchError}</p>
+                )}
+                {!searchLoading &&
+                  !searchError &&
+                  searchTerm.trim().length >= 2 &&
+                  searchResults.length === 0 && (
+                    <p className="text-sm text-muted-foreground">
+                      No matching customers found.
+                    </p>
+                  )}
+                <div className="space-y-2">
+                  {searchResults.map((customer) => (
+                    <div
+                      key={customer.id}
+                      className="p-3 border rounded-md flex items-center justify-between gap-4"
+                    >
+                      <div className="space-y-1">
+                        <p className="font-medium">
+                          {customer.firstName} {customer.lastName}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          {customer.primaryEmail ?? "No email on file"}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => connectExistingMember(customer.id)}
+                        disabled={connectingCustomerId === customer.id}
+                      >
+                        {connectingCustomerId === customer.id ? "Adding…" : "Add"}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              <DialogFooter className="flex flex-col sm:flex-row gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsAddMemberOpen(false)}
-                  disabled={isAddingMember}
-                >
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={isAddingMember}>
-                  {isAddingMember ? "Adding..." : "Add Member"}
-                </Button>
-              </DialogFooter>
-            </form>
+              <Separator />
+
+              <div className="space-y-3">
+                <h4 className="font-medium">Add a brand new member</h4>
+                <form onSubmit={handleCreateNewMember} className="space-y-3">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="newFirstName">First name</Label>
+                      <Input
+                        id="newFirstName"
+                        value={newFirstName}
+                        onChange={(event) => setNewFirstName(event.target.value)}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newLastName">Last name</Label>
+                      <Input
+                        id="newLastName"
+                        value={newLastName}
+                        onChange={(event) => setNewLastName(event.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="newEmail">Email (optional)</Label>
+                      <Input
+                        id="newEmail"
+                        type="email"
+                        value={newEmail}
+                        onChange={(event) => setNewEmail(event.target.value)}
+                        placeholder="member@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="newPhone">Phone (optional)</Label>
+                      <Input
+                        id="newPhone"
+                        value={newPhone}
+                        onChange={(event) => setNewPhone(event.target.value)}
+                        placeholder="(555) 555-5555"
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={isCreatingMember}>
+                    {isCreatingMember ? "Creating…" : "Create and add"}
+                  </Button>
+                </form>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  resetDialogState();
+                  setIsAddMemberOpen(false);
+                }}
+              >
+                Close
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </>
