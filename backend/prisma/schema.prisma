@@ -27,6 +27,33 @@ enum CustomerStatus {
   FORMER
 }
 
+// Classes module enums
+enum ClassSkillLevel {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+  ALL_LEVELS
+}
+
+enum ClassAccessType {
+  INCLUDED_IN_MEMBERSHIP
+  PAID_DROPIN
+  EITHER
+}
+
+enum ClassSessionStatus {
+  SCHEDULED
+  CANCELLED
+}
+
+enum ClassAttendanceStatus {
+  REGISTERED
+  ATTENDED
+  NO_SHOW
+  CANCELLED_BY_STAFF
+  CANCELLED_BY_MEMBER
+}
+
 enum MembershipCadence {
   MONTHLY
   YEARLY
@@ -98,41 +125,48 @@ enum CustomerFileCategory {
 }
 
 model User {
-  id               String             @id @default(cuid())
-  clerkUserId      String             @unique
-  email            String             @unique
-  name             String?
-  userType         UserType           @default(STAFF)
-  isPlatformAdmin  Boolean            @default(false)
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
-  organizations    OrganizationUser[]
-  customerProfiles CustomerProfile[]
-  interactions     Interaction[]      @relation("InteractionCreatedBy")
-  emailMessages    EmailMessage[]     @relation("EmailCreatedBy")
-  smsMessages      SmsMessage[]       @relation("SmsCreatedBy")
-  uploadedFiles    CustomerFile[]     @relation("FileUploadedBy")
+  id                              String                    @id @default(cuid())
+  clerkUserId                     String                    @unique
+  email                           String                    @unique
+  name                            String?
+  userType                        UserType                  @default(STAFF)
+  isPlatformAdmin                 Boolean                   @default(false)
+  createdAt                       DateTime                  @default(now())
+  updatedAt                       DateTime                  @updatedAt
+  organizations                   OrganizationUser[]
+  customerProfiles                CustomerProfile[]
+  interactions                    Interaction[]             @relation("InteractionCreatedBy")
+  emailMessages                   EmailMessage[]            @relation("EmailCreatedBy")
+  smsMessages                     SmsMessage[]              @relation("SmsCreatedBy")
+  uploadedFiles                   CustomerFile[]            @relation("FileUploadedBy")
+  classTemplatesPrimaryInstructor ClassTemplate[]           @relation("TemplatePrimaryInstructor")
+  classSessionsInstructor         ClassSession[]            @relation("SessionInstructor")
+  classRosterEntriesCreated       ClassSessionRosterEntry[] @relation("RosterCreatedBy")
+  classRosterEntriesUpdated       ClassSessionRosterEntry[] @relation("RosterUpdatedBy")
 }
 
 model Organization {
-  id             String              @id @default(cuid())
-  name           String
-  slug           String              @unique
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  users          OrganizationUser[]
-  locations      Location[]
-  customers      CustomerProfile[]
-  households     Household[]
-  householdMembers HouseholdMember[]
-  membershipPlans MembershipPlan[]
-  memberships    Membership[]
-  statusReasons  StatusReason[]
-  interactions   Interaction[]
-  emailMessages  EmailMessage[]
-  smsMessages    SmsMessage[]
-  billingEvents  BillingEvent[]
-  customerFiles  CustomerFile[]
+  id                         String                      @id @default(cuid())
+  name                       String
+  slug                       String                      @unique
+  createdAt                  DateTime                    @default(now())
+  updatedAt                  DateTime                    @updatedAt
+  users                      OrganizationUser[]
+  locations                  Location[]
+  customers                  CustomerProfile[]
+  households                 Household[]
+  householdMembers           HouseholdMember[]
+  membershipPlans            MembershipPlan[]
+  memberships                Membership[]
+  statusReasons              StatusReason[]
+  interactions               Interaction[]
+  emailMessages              EmailMessage[]
+  smsMessages                SmsMessage[]
+  billingEvents              BillingEvent[]
+  customerFiles              CustomerFile[]
+  classTemplates             ClassTemplate[]
+  classTemplateRequiredPlans ClassTemplateRequiredPlan[]
+  classSessions              ClassSession[]
 }
 
 model OrganizationUser {
@@ -149,7 +183,7 @@ model OrganizationUser {
 }
 
 model Location {
-  id             String             @id @default(cuid())
+  id             String   @id @default(cuid())
   organizationId String
   name           String
   code           String
@@ -159,76 +193,79 @@ model Location {
   state          String?
   postalCode     String?
   country        String?
-  isActive       Boolean            @default(true)
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  customerProfiles CustomerProfile[] @relation("CustomerPrimaryLocation")
+  organization            Organization             @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customerProfiles        CustomerProfile[]        @relation("CustomerPrimaryLocation")
   membershipPlanLocations MembershipPlanLocation[]
+  classTemplates          ClassTemplate[]
+  classSessions           ClassSession[]
 
   @@unique([organizationId, code])
 }
 
 model CustomerProfile {
-  id                 String           @id @default(cuid())
-  organizationId     String
-  userId             String?
-  status             CustomerStatus   @default(LEAD)
-  primaryLocationId  String?
-  firstName          String
-  lastName           String
-  preferredName      String?
-  primaryEmail       String?
-  primaryPhone       String?
-  secondaryPhone     String?
-  addressLine1       String?
-  addressLine2       String?
-  city               String?
-  state              String?
-  postalCode         String?
-  country            String?
-  dateOfBirth        DateTime?
-  canEmail           Boolean          @default(true)
-  canSms             Boolean          @default(true)
-  tags               String[]         @default([])
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+  id                String         @id @default(cuid())
+  organizationId    String
+  userId            String?
+  status            CustomerStatus @default(LEAD)
+  primaryLocationId String?
+  firstName         String
+  lastName          String
+  preferredName     String?
+  primaryEmail      String?
+  primaryPhone      String?
+  secondaryPhone    String?
+  addressLine1      String?
+  addressLine2      String?
+  city              String?
+  state             String?
+  postalCode        String?
+  country           String?
+  dateOfBirth       DateTime?
+  canEmail          Boolean        @default(true)
+  canSms            Boolean        @default(true)
+  tags              String[]       @default([])
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
-  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  user          User?        @relation(fields: [userId], references: [id])
-  primaryLocation Location?  @relation("CustomerPrimaryLocation", fields: [primaryLocationId], references: [id])
-  householdsHead Household[] @relation("HouseholdHead")
-  householdMembers HouseholdMember[]
-  memberships    Membership[]
-  interactions   Interaction[]
-  emailMessages  EmailMessage[]
-  smsMessages    SmsMessage[]
-  billingEvents  BillingEvent[]
-  files          CustomerFile[]
+  organization       Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user               User?                     @relation(fields: [userId], references: [id])
+  primaryLocation    Location?                 @relation("CustomerPrimaryLocation", fields: [primaryLocationId], references: [id])
+  householdsHead     Household[]               @relation("HouseholdHead")
+  householdMembers   HouseholdMember[]
+  memberships        Membership[]
+  interactions       Interaction[]
+  emailMessages      EmailMessage[]
+  smsMessages        SmsMessage[]
+  billingEvents      BillingEvent[]
+  files              CustomerFile[]
+  classRosterEntries ClassSessionRosterEntry[]
 }
 
 model Household {
-  id                      String            @id @default(cuid())
-  organizationId          String
-  headCustomerProfileId   String
-  createdAt               DateTime          @default(now())
-  updatedAt               DateTime          @updatedAt
+  id                    String   @id @default(cuid())
+  organizationId        String
+  headCustomerProfileId String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
-  organization        Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  headCustomerProfile CustomerProfile @relation("HouseholdHead", fields: [headCustomerProfileId], references: [id])
+  organization        Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  headCustomerProfile CustomerProfile   @relation("HouseholdHead", fields: [headCustomerProfileId], references: [id])
   members             HouseholdMember[]
 }
 
 model HouseholdMember {
-  id                 String          @id @default(cuid())
-  householdId        String
-  customerProfileId  String
-  organizationId     String
-  relationship       String?
-  createdAt          DateTime        @default(now())
+  id                String   @id @default(cuid())
+  householdId       String
+  customerProfileId String
+  organizationId    String
+  relationship      String?
+  createdAt         DateTime @default(now())
 
-  household      Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  household       Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
   customerProfile CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
   organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
 
@@ -236,28 +273,29 @@ model HouseholdMember {
 }
 
 model MembershipPlan {
-  id                    String                   @id @default(cuid())
-  organizationId        String
-  name                  String
-  description           String?
-  cadence               MembershipCadence
-  priceCents            Int
-  currency              String @default("USD")
-  termType              MembershipTermType
-  termMonths            Int?
-  hasIntroPeriod        Boolean                 @default(false)
-  introMonths           Int?
-  introPriceCents       Int?
-  scopeType             MembershipScopeType     @default(ORG_WIDE)
-  allowsFamilyMembership Boolean                @default(false)
-  maxFamilySize         Int?
-  isActive              Boolean                 @default(true)
-  createdAt             DateTime                @default(now())
-  updatedAt             DateTime                @updatedAt
+  id                     String              @id @default(cuid())
+  organizationId         String
+  name                   String
+  description            String?
+  cadence                MembershipCadence
+  priceCents             Int
+  currency               String              @default("USD")
+  termType               MembershipTermType
+  termMonths             Int?
+  hasIntroPeriod         Boolean             @default(false)
+  introMonths            Int?
+  introPriceCents        Int?
+  scopeType              MembershipScopeType @default(ORG_WIDE)
+  allowsFamilyMembership Boolean             @default(false)
+  maxFamilySize          Int?
+  isActive               Boolean             @default(true)
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
-  organization  Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  memberships   Membership[]
-  locations     MembershipPlanLocation[]
+  organization               Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  memberships                Membership[]
+  locations                  MembershipPlanLocation[]
+  classTemplateRequiredPlans ClassTemplateRequiredPlan[]
 
   @@unique([organizationId, name])
 }
@@ -273,11 +311,11 @@ model MembershipPlanLocation {
 }
 
 model Membership {
-  id                     String            @id @default(cuid())
+  id                     String           @id @default(cuid())
   organizationId         String
   headCustomerProfileId  String
   membershipPlanId       String
-  status                 MembershipStatus  @default(ACTIVE)
+  status                 MembershipStatus @default(ACTIVE)
   startDate              DateTime
   endDate                DateTime?
   renewalDate            DateTime?
@@ -286,18 +324,18 @@ model Membership {
   freezeStartDate        DateTime?
   freezeEndDate          DateTime?
   externalSubscriptionId String?
-  createdAt              DateTime          @default(now())
-  updatedAt              DateTime          @updatedAt
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
 
-  organization        Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization        Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   headCustomerProfile CustomerProfile @relation(fields: [headCustomerProfileId], references: [id])
-  membershipPlan      MembershipPlan @relation(fields: [membershipPlanId], references: [id])
-  cancelReason        StatusReason?  @relation("MembershipCancelReason", fields: [cancelReasonId], references: [id])
-  freezeReason        StatusReason?  @relation("MembershipFreezeReason", fields: [freezeReasonId], references: [id])
+  membershipPlan      MembershipPlan  @relation(fields: [membershipPlanId], references: [id])
+  cancelReason        StatusReason?   @relation("MembershipCancelReason", fields: [cancelReasonId], references: [id])
+  freezeReason        StatusReason?   @relation("MembershipFreezeReason", fields: [freezeReasonId], references: [id])
 }
 
 model StatusReason {
-  id             String            @id @default(cuid())
+  id             String           @id @default(cuid())
   organizationId String
   type           StatusReasonType
   label          String
@@ -306,98 +344,191 @@ model StatusReason {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
-  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  cancelMemberships Membership[]  @relation("MembershipCancelReason")
-  freezeMemberships Membership[]  @relation("MembershipFreezeReason")
+  organization      Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  cancelMemberships Membership[] @relation("MembershipCancelReason")
+  freezeMemberships Membership[] @relation("MembershipFreezeReason")
 }
 
 model Interaction {
-  id                 String             @id @default(cuid())
-  organizationId     String
-  customerProfileId  String
-  createdByUserId    String
-  interactionType    InteractionType
-  channel            InteractionChannel
-  title              String
-  body               String
-  relatedEmailId     String?            @unique
-  relatedSmsId       String?            @unique
-  createdAt          DateTime           @default(now())
+  id                String             @id @default(cuid())
+  organizationId    String
+  customerProfileId String
+  createdByUserId   String
+  interactionType   InteractionType
+  channel           InteractionChannel
+  title             String
+  body              String
+  relatedEmailId    String?            @unique
+  relatedSmsId      String?            @unique
+  createdAt         DateTime           @default(now())
 
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   customerProfile CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
-  createdByUser   User           @relation("InteractionCreatedBy", fields: [createdByUserId], references: [id])
-  relatedEmail    EmailMessage?  @relation("InteractionEmail", fields: [relatedEmailId], references: [id])
-  relatedSms      SmsMessage?    @relation("InteractionSms", fields: [relatedSmsId], references: [id])
+  createdByUser   User            @relation("InteractionCreatedBy", fields: [createdByUserId], references: [id])
+  relatedEmail    EmailMessage?   @relation("InteractionEmail", fields: [relatedEmailId], references: [id])
+  relatedSms      SmsMessage?     @relation("InteractionSms", fields: [relatedSmsId], references: [id])
 }
 
 model EmailMessage {
-  id                  String        @id @default(cuid())
-  organizationId      String
-  customerProfileId   String
-  templateName        String?
-  subject             String
-  body                String
-  status              EmailStatus   @default(QUEUED)
-  providerMessageId   String?
-  createdByUserId     String
-  createdAt           DateTime      @default(now())
-  sentAt              DateTime?
-  failedAt            DateTime?
-  errorMessage        String?
+  id                String      @id @default(cuid())
+  organizationId    String
+  customerProfileId String
+  templateName      String?
+  subject           String
+  body              String
+  status            EmailStatus @default(QUEUED)
+  providerMessageId String?
+  createdByUserId   String
+  createdAt         DateTime    @default(now())
+  sentAt            DateTime?
+  failedAt          DateTime?
+  errorMessage      String?
 
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   customerProfile CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
-  createdByUser   User           @relation("EmailCreatedBy", fields: [createdByUserId], references: [id])
-  interaction     Interaction?   @relation("InteractionEmail")
+  createdByUser   User            @relation("EmailCreatedBy", fields: [createdByUserId], references: [id])
+  interaction     Interaction?    @relation("InteractionEmail")
 }
 
 model SmsMessage {
-  id                 String        @id @default(cuid())
-  organizationId     String
-  customerProfileId  String
-  templateName       String?
-  body               String
-  status             SmsStatus     @default(QUEUED)
-  createdByUserId    String
-  createdAt          DateTime      @default(now())
+  id                String    @id @default(cuid())
+  organizationId    String
+  customerProfileId String
+  templateName      String?
+  body              String
+  status            SmsStatus @default(QUEUED)
+  createdByUserId   String
+  createdAt         DateTime  @default(now())
 
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   customerProfile CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
-  createdByUser   User           @relation("SmsCreatedBy", fields: [createdByUserId], references: [id])
-  interaction     Interaction?   @relation("InteractionSms")
+  createdByUser   User            @relation("SmsCreatedBy", fields: [createdByUserId], references: [id])
+  interaction     Interaction?    @relation("InteractionSms")
 }
 
 model BillingEvent {
-  id                 String        @id @default(cuid())
-  organizationId     String
-  customerProfileId  String
-  date               DateTime
-  amountCents        Int
-  currency           String @default("USD")
-  description        String?
-  status             BillingStatus @default(PENDING)
-  externalInvoiceId  String?
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  organizationId    String
+  customerProfileId String
+  date              DateTime
+  amountCents       Int
+  currency          String        @default("USD")
+  description       String?
+  status            BillingStatus @default(PENDING)
+  externalInvoiceId String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   customerProfile CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
 }
 
 model CustomerFile {
-  id                 String           @id @default(cuid())
-  organizationId     String
-  customerProfileId  String
-  fileName           String
-  category           CustomerFileCategory @default(OTHER)
-  s3Key              String
-  contentType        String?
-  sizeBytes          Int
-  uploadedByUserId   String
-  uploadedAt         DateTime         @default(now())
+  id                String               @id @default(cuid())
+  organizationId    String
+  customerProfileId String
+  fileName          String
+  category          CustomerFileCategory @default(OTHER)
+  s3Key             String
+  contentType       String?
+  sizeBytes         Int
+  uploadedByUserId  String
+  uploadedAt        DateTime             @default(now())
 
-  organization    Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   customerProfile CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
-  uploadedBy      User           @relation("FileUploadedBy", fields: [uploadedByUserId], references: [id])
+  uploadedBy      User            @relation("FileUploadedBy", fields: [uploadedByUserId], references: [id])
+}
+
+/// Template definition for recurring classes/programs.
+/// - `daysOfWeek` uses ISO weekday numbers (1=Mon ... 7=Sun) for simplicity.
+/// - `startTime`/`endTime` are stored as "HH:mm" strings (local to location) to avoid timezone shifts.
+model ClassTemplate {
+  id                      String          @id @default(cuid())
+  organizationId          String
+  locationId              String
+  room                    String?
+  name                    String
+  description             String?
+  program                 String?
+  skillLevel              ClassSkillLevel
+  tags                    String[]        @default([])
+  startDate               DateTime
+  endDate                 DateTime?
+  daysOfWeek              Int[]           @default([]) // 1=Mon ... 7=Sun
+  startTime               String // "HH:mm" local time
+  endTime                 String // "HH:mm" local time
+  maxParticipants         Int
+  accessType              ClassAccessType
+  dropInPriceCents        Int?
+  currency                String?
+  minAge                  Int?
+  maxAge                  Int?
+  ageLabel                String?
+  membersOnly             Boolean         @default(false)
+  prerequisiteLabel       String?
+  primaryInstructorUserId String
+  instructorDisplayName   String?
+  isActive                Boolean         @default(true)
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+
+  organization      Organization                @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location          Location                    @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  primaryInstructor User                        @relation("TemplatePrimaryInstructor", fields: [primaryInstructorUserId], references: [id])
+  requiredPlans     ClassTemplateRequiredPlan[]
+  sessions          ClassSession[]
+}
+
+model ClassTemplateRequiredPlan {
+  id               String @id @default(cuid())
+  templateId       String
+  membershipPlanId String
+  organizationId   String
+
+  template       ClassTemplate  @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  membershipPlan MembershipPlan @relation(fields: [membershipPlanId], references: [id], onDelete: Cascade)
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([templateId, membershipPlanId])
+}
+
+model ClassSession {
+  id                    String             @id @default(cuid())
+  templateId            String
+  organizationId        String
+  locationId            String
+  room                  String?
+  startDateTime         DateTime
+  endDateTime           DateTime
+  maxParticipants       Int
+  instructorUserId      String?
+  instructorDisplayName String?
+  status                ClassSessionStatus @default(SCHEDULED)
+  cancelReason          String?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  template      ClassTemplate             @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  organization  Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  location      Location                  @relation(fields: [locationId], references: [id], onDelete: Cascade)
+  instructor    User?                     @relation("SessionInstructor", fields: [instructorUserId], references: [id])
+  rosterEntries ClassSessionRosterEntry[]
+}
+
+model ClassSessionRosterEntry {
+  id                String                @id @default(cuid())
+  sessionId         String
+  customerProfileId String
+  status            ClassAttendanceStatus @default(REGISTERED)
+  note              String?
+  createdByUserId   String?
+  updatedByUserId   String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  session         ClassSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  customerProfile CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  createdByUser   User?           @relation("RosterCreatedBy", fields: [createdByUserId], references: [id])
+  updatedByUser   User?           @relation("RosterUpdatedBy", fields: [updatedByUserId], references: [id])
 }
