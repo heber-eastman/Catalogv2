@@ -2,14 +2,11 @@ import * as React from "react";
 import { Search, X } from "lucide-react";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../ui/select";
 import { Badge } from "../ui/badge";
+import {
+  FilterMenu,
+  FilterOption,
+} from "../filters/FilterMenu";
 
 export interface PeopleFilters {
   search: string;
@@ -17,11 +14,6 @@ export interface PeopleFilters {
   statuses: string[];
   membershipPlans: string[];
   tags: string[];
-}
-
-export interface FilterOption {
-  value: string;
-  label: string;
 }
 
 interface PeopleFilterBarProps {
@@ -41,11 +33,6 @@ export function PeopleFilterBar({
   availablePlans,
   availableTags,
 }: PeopleFilterBarProps) {
-  const [locationOpen, setLocationOpen] = React.useState(false);
-  const [statusOpen, setStatusOpen] = React.useState(false);
-  const [planOpen, setPlanOpen] = React.useState(false);
-  const [tagOpen, setTagOpen] = React.useState(false);
-
   const handleSearchChange = (value: string) => {
     onFiltersChange({ ...filters, search: value });
   };
@@ -121,34 +108,34 @@ export function PeopleFilterBar({
         {/* Filter Dropdowns */}
         <div className="flex flex-wrap gap-2">
           {/* Location Filter */}
-          <MultiSelectFilter
+          <FilterMenu
             label="Location"
             selectedValues={filters.locations}
-            availableValues={availableLocations}
+            options={availableLocations}
             onToggle={toggleLocation}
           />
 
           {/* Status Filter */}
-          <MultiSelectFilter
+          <FilterMenu
             label="Status"
             selectedValues={filters.statuses}
-            availableValues={availableStatuses}
+            options={availableStatuses}
             onToggle={toggleStatus}
           />
 
           {/* Membership Plan Filter */}
-          <MultiSelectFilter
+          <FilterMenu
             label="Membership Plan"
             selectedValues={filters.membershipPlans}
-            availableValues={availablePlans}
+            options={availablePlans}
             onToggle={togglePlan}
           />
 
           {/* Tag Filter */}
-          <MultiSelectFilter
+          <FilterMenu
             label="Tag"
             selectedValues={filters.tags}
-            availableValues={availableTags}
+            options={availableTags}
             onToggle={toggleTag}
           />
 
@@ -219,78 +206,6 @@ export function PeopleFilterBar({
             </Badge>
           ))}
         </div>
-      )}
-    </div>
-  );
-}
-
-// Helper component for multi-select filters
-interface MultiSelectFilterProps {
-  label: string;
-  selectedValues: string[];
-  availableValues: FilterOption[];
-  onToggle: (value: string) => void;
-}
-
-function MultiSelectFilter({
-  label,
-  selectedValues,
-  availableValues,
-  onToggle,
-}: MultiSelectFilterProps) {
-  const [open, setOpen] = React.useState(false);
-
-  return (
-    <div className="relative">
-      <Button
-        variant="outline"
-        onClick={() => setOpen(!open)}
-        className="h-9 gap-2"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        {label}
-        {selectedValues.length > 0 && (
-          <Badge variant="secondary" className="ml-1 px-1.5 py-0">
-            {selectedValues.length}
-          </Badge>
-        )}
-      </Button>
-
-      {open && (
-        <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
-          <div className="absolute top-full left-0 z-50 mt-1 w-56 rounded-md border border-border bg-popover p-1 shadow-md">
-            <div className="max-h-64 overflow-auto" role="listbox">
-              {availableValues.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => onToggle(option.value)}
-                  className="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 hover:bg-accent text-left"
-                  role="option"
-                  aria-selected={selectedValues.includes(option.value)}
-                >
-                  <div
-                    className={`h-4 w-4 rounded border ${
-                      selectedValues.includes(option.value)
-                        ? "bg-primary border-primary"
-                        : "border-input"
-                    } flex items-center justify-center`}
-                  >
-                    {selectedValues.includes(option.value) && (
-                      <div className="h-2 w-2 bg-primary-foreground rounded-sm" />
-                    )}
-                  </div>
-                  <span className="flex-1">{option.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </>
       )}
     </div>
   );
