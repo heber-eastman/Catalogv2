@@ -7,6 +7,8 @@ import {
   Body,
   Req,
   UseGuards,
+  Post,
+  Delete,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { AuthGuard } from '../auth/auth.guard';
@@ -15,14 +17,23 @@ import {
   ClassSessionsService,
   UpdateSessionDto,
 } from './class-sessions.service';
+import { ClassRosterService, NewCustomerPayload } from './class-roster.service';
+import { ClassAttendanceStatus } from '@prisma/client';
 
 @UseGuards(AuthGuard, OrganizationsGuard)
 @Controller('api/classes/sessions')
 export class ClassSessionsController {
-  constructor(private readonly sessionsService: ClassSessionsService) {}
+  constructor(
+    private readonly sessionsService: ClassSessionsService,
+    private readonly rosterService: ClassRosterService,
+  ) {}
 
   private getOrganizationId(req: Request): string {
     return req.organization?.id as string;
+  }
+
+  private getUserId(req: Request): string | undefined {
+    return req.user?.id;
   }
 
   @Get()
@@ -58,5 +69,79 @@ export class ClassSessionsController {
   ) {
     const organizationId = this.getOrganizationId(req);
     return this.sessionsService.updateSession(id, organizationId, body);
+  }
+
+  @Post(':id/participants')
+  async addParticipant(
+    @Req() req: Request,
+    @Param('id') sessionId: string,
+    @Body()
+    body:
+      | { customerProfileId: string; status?: ClassAttendanceStatus }
+      | { newCustomer: NewCustomerPayload },
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const actingUserId = this.getUserId(req);
+
+    if ('customerProfileId' in body && body.customerProfileId) {
+      await this.rosterService.addExistingParticipant(
+        sessionId,
+        organizationId,
+        body.customerProfileId,
+        body.status ?? ClassAttendanceStatus.REGISTERED,
+        actingUserId,
+      );
+    } else if ('newCustomer' in body && body.newCustomer) {
+      await this.rosterService.addNewCustomerAndParticipant(
+        sessionId,
+        organizationId,
+        body.newCustomer,
+        actingUserId,
+      );
+    } else {
+      throw new Error('Invalid participant payload');
+    }
+
+    return this.sessionsService.findOneWithRoster(sessionId, organizationId);
+  }
+
+  @Patch(':id/participants/:participantId')
+  async updateParticipant(
+    @Req() req: Request,
+    @Param('id') sessionId: string,
+    @Param('participantId') participantId: string,
+    @Body()
+    body: { status: ClassAttendanceStatus; note?: string },
+  ) {
+    const organizationId = this.getOrganizationId(req);
+    const actingUserId = this.getUserId(req);
+
+    await this.rosterService.updateParticipantStatus(
+      sessionId,
+      organizationId,
+      participantId,
+      body.status,
+      body.note,
+      actingUserId,
+    );
+
+    return this.sessionsService.findOneWithRoster(sessionId, organizationId);
+  }
+
+  @Delete(':id/participants/:participantId')
+  async removeParticipant(
+    @Req() req: Request,
+    @Param('id') sessionId: string,
+    @Param('participantId') participantId: string,
+  ) {
+    const organizationId = this.getOrganizationId(req);
+
+    await this.rosterService.removeParticipant(
+      sessionId,
+      organizationId,
+      participantId,
+    );
+
+    return this.sessionsService.findOneWithRoster(sessionId, organizationId);
   }
 }
