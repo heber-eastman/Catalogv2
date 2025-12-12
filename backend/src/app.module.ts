@@ -6,6 +6,7 @@ import { AuthModule } from './auth/auth.module';
 import { OrganizationsModule } from './organizations/organizations.module';
 import { CustomersModule } from './customers/customers.module';
 import { CustomerSettingsModule } from './settings/customers/customer-settings.module';
+import { ClassesModule } from './classes/classes.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { CustomerSettingsModule } from './settings/customers/customer-settings.m
     OrganizationsModule,
     CustomersModule,
     CustomerSettingsModule,
+    ClassesModule,
   ],
   controllers: [HealthController],
 })
