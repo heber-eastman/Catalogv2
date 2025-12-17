@@ -21,7 +21,7 @@ import { ClassRosterService, NewCustomerPayload } from './class-roster.service';
 import { ClassAttendanceStatus } from '@prisma/client';
 
 @UseGuards(AuthGuard, OrganizationsGuard)
-@Controller('api/classes/sessions')
+@Controller('classes/sessions')
 export class ClassSessionsController {
   constructor(
     private readonly sessionsService: ClassSessionsService,
@@ -52,6 +52,8 @@ export class ClassSessionsController {
       locationId: query.locationId,
       program: query.program,
       instructorUserId: query.instructorUserId,
+      room: query.room,
+      status: query.status as any,
     });
   }
 

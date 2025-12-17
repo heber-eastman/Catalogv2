@@ -9,6 +9,8 @@ export interface FindSessionsParams {
   locationId?: string;
   program?: string;
   instructorUserId?: string;
+  room?: string;
+  status?: ClassSessionStatus;
 }
 
 export interface UpdateSessionDto {
@@ -46,10 +48,21 @@ export class ClassSessionsService {
       where.template = { program: params.program };
     }
 
+    if (params.room) {
+      where.room = params.room;
+    }
+
+    if (params.status) {
+      where.status = params.status;
+    }
+
     return this.prisma.classSession.findMany({
       where,
       orderBy: { startDateTime: 'asc' },
       include: {
+        location: {
+          select: { id: true, name: true },
+        },
         template: {
           select: {
             id: true,
@@ -58,6 +71,9 @@ export class ClassSessionsService {
             skillLevel: true,
             accessType: true,
           },
+        },
+        instructor: {
+          select: { id: true, name: true },
         },
         _count: {
           select: { rosterEntries: true },
@@ -70,6 +86,7 @@ export class ClassSessionsService {
     const session = await this.prisma.classSession.findFirst({
       where: { id, organizationId },
       include: {
+        location: { select: { id: true, name: true } },
         template: {
           select: {
             id: true,
@@ -122,7 +139,8 @@ export class ClassSessionsService {
       throw new NotFoundException('Class session not found');
     }
 
-    const data: Prisma.ClassSessionUpdateInput = {};
+    // use unchecked update to allow direct scalar assignment of FK fields
+    const data: Prisma.ClassSessionUncheckedUpdateInput = {};
     if (dto.status) {
       data.status = dto.status;
       if (dto.status === ClassSessionStatus.CANCELLED) {

@@ -1,8 +1,9 @@
 import * as React from "react";
-import { 
-  CalendarDays, 
-  Users, 
-  ShoppingCart, 
+import {
+  CalendarClock,
+  CalendarDays,
+  Users,
+  ShoppingCart,
   BarChart3,
   Settings,
   ChevronLeft,
@@ -12,7 +13,13 @@ import { cn } from "../ui/utils";
 import { Button } from "../ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip";
 
-export type ModuleId = "tee-sheet" | "customers" | "pos" | "reports" | "settings";
+export type ModuleId =
+  | "tee-sheet"
+  | "customers"
+  | "classes"
+  | "pos"
+  | "reports"
+  | "settings";
 
 interface Module {
   id: ModuleId;
@@ -30,6 +37,11 @@ const modules: Module[] = [
     id: "customers",
     label: "Customers",
     icon: Users,
+  },
+  {
+    id: "classes",
+    label: "Classes",
+    icon: CalendarClock,
   },
   {
     id: "pos",

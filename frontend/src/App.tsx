@@ -15,13 +15,22 @@ import {
   UserButton,
   useUser,
 } from "@clerk/clerk-react";
+import { ClassesLayout, ClassesSection } from "./modules/classes/ClassesLayout";
 
 function AppContent() {
   const { isLoaded } = useUser();
   const [activeModule, setActiveModule] = React.useState<ModuleId>("customers");
   const [activeCustomerSection, setActiveCustomerSection] = React.useState("dashboard");
   const [activeSettingsSection, setActiveSettingsSection] = React.useState("customers");
+  const [activeClassesSection, setActiveClassesSection] =
+    React.useState<ClassesSection>("calendar");
   const [showProfile, setShowProfile] = React.useState(false);
+
+  React.useEffect(() => {
+    if (activeModule === "classes") {
+      setActiveClassesSection("calendar");
+    }
+  }, [activeModule]);
 
   if (!isLoaded) {
     return (
@@ -62,6 +71,13 @@ function AppContent() {
               <CustomersLayoutNew
                 activeSection={activeCustomerSection}
                 onSectionChange={setActiveCustomerSection}
+              />
+            )}
+
+            {activeModule === "classes" && (
+              <ClassesLayout
+                activeSection={activeClassesSection}
+                onSectionChange={setActiveClassesSection}
               />
             )}
 

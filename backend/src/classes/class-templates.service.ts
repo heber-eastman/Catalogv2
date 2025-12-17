@@ -10,10 +10,14 @@ export interface FindTemplatesParams {
   isActive?: boolean;
 }
 
-export type CreateClassTemplateDto = Omit<
+type BaseTemplateInput = Omit<
   Prisma.ClassTemplateUncheckedCreateInput,
   'id' | 'organizationId' | 'createdAt' | 'updatedAt' | 'sessions'
 >;
+
+export type CreateClassTemplateDto = BaseTemplateInput & {
+  requiredMembershipPlanIds?: string[];
+};
 
 export type UpdateClassTemplateDto = Partial<CreateClassTemplateDto>;
 
@@ -67,12 +71,24 @@ export class ClassTemplatesService {
     data: CreateClassTemplateDto,
     organizationId: string,
   ): Promise<ClassTemplate> {
+    const { requiredMembershipPlanIds = [], ...templateData } = data;
+
     const template = await this.prisma.classTemplate.create({
       data: {
-        ...data,
+        ...templateData,
         organizationId,
       },
     });
+
+    if (requiredMembershipPlanIds.length) {
+      await this.prisma.classTemplateRequiredPlan.createMany({
+        data: requiredMembershipPlanIds.map((planId) => ({
+          templateId: template.id,
+          membershipPlanId: planId,
+          organizationId,
+        })),
+      });
+    }
 
     await this.generateSessionsForTemplate(template);
     return template;
@@ -85,10 +101,27 @@ export class ClassTemplatesService {
   ): Promise<ClassTemplate> {
     await this.findOne(id, organizationId);
 
+    const { requiredMembershipPlanIds, ...templateData } = data;
+
     const updated = await this.prisma.classTemplate.update({
       where: { id },
-      data,
+      data: templateData,
     });
+
+    if (requiredMembershipPlanIds) {
+      await this.prisma.classTemplateRequiredPlan.deleteMany({
+        where: { templateId: id, organizationId },
+      });
+      if (requiredMembershipPlanIds.length) {
+        await this.prisma.classTemplateRequiredPlan.createMany({
+          data: requiredMembershipPlanIds.map((planId) => ({
+            templateId: id,
+            membershipPlanId: planId,
+            organizationId,
+          })),
+        });
+      }
+    }
 
     // Regenerate future sessions without roster entries; keep past/attended intact
     const today = new Date();

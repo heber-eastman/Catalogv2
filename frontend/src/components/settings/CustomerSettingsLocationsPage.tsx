@@ -179,10 +179,7 @@ export function CustomerSettingsLocationsPage() {
       {/* Page Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="space-y-1">
-          <h2>Company Locations</h2>
-          <p className="text-muted-foreground">
-            Manage the physical locations associated with your organization
-          </p>
+          <h2 className="text-xl font-semibold leading-tight">Company Locations</h2>
         </div>
         <Button onClick={handleNewLocation} className="gap-2">
           <Plus className="h-4 w-4" />

@@ -7,6 +7,7 @@ import {
   FilterMenu,
   FilterOption,
 } from "../filters/FilterMenu";
+export type { FilterOption };
 
 export interface PeopleFilters {
   search: string;

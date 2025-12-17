@@ -20,7 +20,7 @@ import {
 } from './class-templates.service';
 
 @UseGuards(AuthGuard, OrganizationsGuard)
-@Controller('api/classes/templates')
+@Controller('classes/templates')
 export class ClassTemplatesController {
   constructor(private readonly templatesService: ClassTemplatesService) {}
 

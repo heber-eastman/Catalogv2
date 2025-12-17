@@ -48,32 +48,19 @@ export function SettingsLayout({
       case "customers":
         return (
           <>
-            {/* Header */}
-            <div className="px-6 max-w-7xl mx-auto w-full">
-              <div>
-                <h2>Customer Settings</h2>
-                <p className="text-muted-foreground">
-                  Configure customer-related settings and preferences
-                </p>
-              </div>
-            </div>
-
-            {/* Tertiary Navigation - Tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-6">
-              <div className="px-6">
-                <div className="max-w-7xl mx-auto w-full">
-                  <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto">
-                    <TabsTrigger value="membership-plans">Membership Plans</TabsTrigger>
-                    <TabsTrigger value="status-reasons">Status Reasons</TabsTrigger>
-                    <TabsTrigger value="custom-fields">Custom Fields</TabsTrigger>
-                    <TabsTrigger value="comms">Comms</TabsTrigger>
-                    <TabsTrigger value="automations">Automations</TabsTrigger>
-                    <TabsTrigger value="import-export">Import / Export</TabsTrigger>
-                  </TabsList>
-                </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-2">
+              <div className="max-w-7xl mx-auto w-full">
+                <TabsList className="w-full justify-start overflow-x-auto flex-wrap h-auto">
+                  <TabsTrigger value="membership-plans">Membership Plans</TabsTrigger>
+                  <TabsTrigger value="status-reasons">Status Reasons</TabsTrigger>
+                  <TabsTrigger value="custom-fields">Custom Fields</TabsTrigger>
+                  <TabsTrigger value="comms">Comms</TabsTrigger>
+                  <TabsTrigger value="automations">Automations</TabsTrigger>
+                  <TabsTrigger value="import-export">Import / Export</TabsTrigger>
+                </TabsList>
               </div>
 
-              <div className="px-6 max-w-7xl mx-auto w-full">
+              <div className="max-w-7xl mx-auto w-full">
                 <TabsContent value="membership-plans" className="mt-6">
                   <CustomerSettingsMembershipPlansPage />
                 </TabsContent>
@@ -104,28 +91,14 @@ export function SettingsLayout({
 
       case "company":
         return (
-          <div className="px-6 max-w-7xl mx-auto w-full space-y-6">
-            <div>
-              <h2>Company Settings</h2>
-              <p className="text-muted-foreground">
-                Manage company profile, locations, and organizational preferences
-              </p>
-            </div>
-            <div className="mt-6">
-              <CustomerSettingsLocationsPage />
-            </div>
+          <div className="max-w-7xl mx-auto w-full space-y-6">
+            <CustomerSettingsLocationsPage />
           </div>
         );
 
       case "account":
         return (
-          <div className="px-6 max-w-7xl mx-auto w-full space-y-6">
-            <div>
-              <h2>Account Settings</h2>
-              <p className="text-muted-foreground">
-                Manage your personal account preferences and security
-              </p>
-            </div>
+          <div className="max-w-7xl mx-auto w-full space-y-6">
             <SettingsPlaceholder
               title="Account Settings"
               description="Update your profile, password, and notification preferences"
@@ -188,31 +161,18 @@ export function SettingsLayout({
   };
 
   return (
-    <div className="flex flex-1 flex-col h-full">
-      {/* Page Header - Spans full width above secondary nav and content */}
-      <div className="h-20 px-6 flex items-center border-b border-border bg-background shrink-0">
-        <div>
-          <h1>Settings</h1>
-          <p className="text-muted-foreground">
-            Configure your application preferences and settings
-          </p>
-        </div>
-      </div>
+    <div className="flex flex-1 min-h-0 bg-background">
+      <SecondarySidebar
+        title="Settings"
+        sections={settingsNavSections}
+        activeSection={activeSection}
+        onSectionChange={onSectionChange}
+      />
 
-      {/* Content area with secondary nav and main content */}
-      <div className="flex flex-1 min-h-0">
-        {/* Secondary Sidebar for Settings Module */}
-        <SecondarySidebar
-          title="Settings"
-          sections={settingsNavSections}
-          activeSection={activeSection}
-          onSectionChange={onSectionChange}
-        />
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col min-h-0 bg-background">
-          <ScrollArea className="flex-1">
-            {renderContent()}
+      <div className="flex-1 flex flex-col min-h-0">
+        <div className="flex-1 min-h-0">
+          <ScrollArea className="h-full">
+            <div className="p-6 space-y-6">{renderContent()}</div>
           </ScrollArea>
         </div>
       </div>
